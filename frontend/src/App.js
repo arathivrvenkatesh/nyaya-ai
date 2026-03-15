@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const API = 'https://nyaya-ai-backend.onrender.com';
+const API = 'http://127.0.0.1:8000';
 
 function App() {
   const [text, setText] = useState('');
@@ -21,6 +21,24 @@ function App() {
     try {
       const res = await axios.post(`${API}/analyze`, { text, language: 'english' });
       setResult(res.data);
+
+      // Save to MongoDB
+      try {
+        await axios.post(`${API}/save-case`, {
+          text: text,
+          category: res.data.analysis.category,
+          stress_score: res.data.analysis.stress_score,
+          law_sections: res.data.analysis.law_sections,
+          rights: res.data.analysis.rights,
+          next_steps: res.data.analysis.next_steps,
+          urgent: res.data.analysis.urgent,
+          user_name: name || 'Anonymous',
+          city: city || 'Unknown'
+        });
+      } catch (saveErr) {
+        console.log('Save failed silently:', saveErr);
+      }
+
       if (city) {
         const centersRes = await axios.get(`${API}/legal-centers?city=${city}`);
         setCenters(centersRes.data.centers);

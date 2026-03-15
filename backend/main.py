@@ -5,17 +5,14 @@ from pydantic import BaseModel
 from services.nlp import analyze_legal_problem, get_helplines
 import os
 
-# Load environment variables
 load_dotenv()
 
-# Create FastAPI app
 app = FastAPI(
     title="NYAYA AI",
     description="Legal Rights Assistant for the Underprivileged",
     version="1.0.0"
 )
 
-# Allow frontend to talk to backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,20 +21,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Input model
 class ProblemInput(BaseModel):
     text: str
     language: str = "english"
 
-# Test route
+class LetterInput(BaseModel):
+    text: str
+    category: str
+    law_sections: list
+    user_name: str = "The Complainant"
+    user_address: str = "Address of Complainant"
+
+class SaveCaseInput(BaseModel):
+    text: str
+    category: str
+    stress_score: int
+    law_sections: list
+    rights: str
+    next_steps: str
+    urgent: bool
+    user_name: str = "Anonymous"
+    city: str = "Unknown"
+
 @app.get("/")
 def home():
-    return {
-        "message": "Welcome to NYAYA AI",
-        "status": "running"
-    }
+    return {"message": "Welcome to NYAYA AI", "status": "running"}
 
-# Health check route
 @app.get("/health")
 def health():
     return {
@@ -47,16 +56,10 @@ def health():
         "mongodb": "set" if os.getenv("MONGODB_URL") else "missing"
     }
 
-# Main analyze route
 @app.post("/analyze")
 def analyze(input: ProblemInput):
-    # Analyze the problem
     result = analyze_legal_problem(input.text)
-
-    # Get helplines based on category and urgency
     helplines = get_helplines(result["category"], result["urgent"])
-
-    # Add mental health support if stress score is high
     mental_health_support = None
     if result["stress_score"] >= 7:
         mental_health_support = {
@@ -64,19 +67,12 @@ def analyze(input: ProblemInput):
             "suggestion": "Please consider talking to someone.",
             "helpline": "iCall: 9152987821 (Mon-Sat 8AM-10PM)"
         }
-
     return {
         "success": True,
         "analysis": result,
         "helplines": helplines,
         "mental_health_support": mental_health_support
     }
-class LetterInput(BaseModel):
-    text: str
-    category: str
-    law_sections: list
-    user_name: str = "The Complainant"
-    user_address: str = "Address of Complainant"
 
 @app.post("/generate-letter")
 def generate_letter(input: LetterInput):
@@ -88,16 +84,38 @@ def generate_letter(input: LetterInput):
         user_name=input.user_name,
         user_address=input.user_address
     )
-    return {
-        "success": True,
-        "letter": letter
-    }
+    return {"success": True, "letter": letter}
+
 @app.get("/legal-centers")
 def legal_centers(city: str = None):
     from services.legal_aid import find_nearest_centers
     centers = find_nearest_centers(city)
-    return {
-        "success": True,
-        "centers": centers,
-        "total": len(centers)
-    }
+    return {"success": True, "centers": centers, "total": len(centers)}
+
+@app.post("/save-case")
+def save_case(input: SaveCaseInput):
+    from services.database import save_case as db_save
+    case_id = db_save(
+        problem_text=input.text,
+        category=input.category,
+        stress_score=input.stress_score,
+        law_sections=input.law_sections,
+        rights=input.rights,
+        next_steps=input.next_steps,
+        urgent=input.urgent,
+        user_name=input.user_name,
+        city=input.city
+    )
+    return {"success": True, "case_id": case_id}
+
+@app.get("/cases")
+def get_cases():
+    from services.database import get_all_cases
+    cases = get_all_cases()
+    return {"success": True, "cases": cases, "total": len(cases)}
+
+@app.get("/stats")
+def get_stats():
+    from services.database import get_stats
+    stats = get_stats()
+    return {"success": True, "stats": stats}
