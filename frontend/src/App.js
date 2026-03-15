@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const API = 'http://127.0.0.1:8000';
+const API = 'https://nyaya-ai-backend.onrender.com';
 
 function App() {
   const [text, setText] = useState('');
