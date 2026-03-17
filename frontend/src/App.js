@@ -14,6 +14,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [letterLoading, setLetterLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
 
   const analyze = async () => {
     if (!text.trim()) { setError('Please describe your problem first'); return; }
@@ -21,8 +23,6 @@ function App() {
     try {
       const res = await axios.post(`${API}/analyze`, { text, language: 'english' });
       setResult(res.data);
-
-      // Save to MongoDB
       try {
         await axios.post(`${API}/save-case`, {
           text: text,
@@ -38,12 +38,13 @@ function App() {
       } catch (saveErr) {
         console.log('Save failed silently:', saveErr);
       }
-
       if (city) {
         const centersRes = await axios.get(`${API}/legal-centers?city=${city}`);
         setCenters(centersRes.data.centers);
       }
-    } catch (err) { setError('Something went wrong. Please try again!'); }
+    } catch (err) {
+      setError('Something went wrong. Please try again!');
+    }
     setLoading(false);
   };
 
@@ -52,13 +53,16 @@ function App() {
     setLetterLoading(true);
     try {
       const res = await axios.post(`${API}/generate-letter`, {
-        text, category: result.analysis.category,
+        text,
+        category: result.analysis.category,
         law_sections: result.analysis.law_sections,
         user_name: name || 'The Complainant',
         user_address: address || 'Address of Complainant'
       });
       setLetter(res.data.letter);
-    } catch (err) { setError('Could not generate letter. Try again!'); }
+    } catch (err) {
+      setError('Could not generate letter. Try again!');
+    }
     setLetterLoading(false);
   };
 
@@ -70,6 +74,47 @@ function App() {
     doc.setFontSize(12);
     doc.text(lines, 15, 20);
     doc.save('nyaya-ai-complaint-letter.pdf');
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+      recorder.ondataavailable = (e) => chunks.push(e.data);
+      recorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+        try {
+          const res = await axios.post(
+            `http://127.0.0.1:8000/transcribe?language=en`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
+          if (res.data.success) {
+            setText(res.data.text);
+          } else {
+            setError('Could not transcribe audio. Please try again!');
+          }
+        } catch (err) {
+          setError('Transcription failed. Please try again!');
+        }
+        stream.getTracks().forEach(track => track.stop());
+      };
+      recorder.start();
+      setMediaRecorder(recorder);
+      setRecording(true);
+    } catch (err) {
+      setError('Microphone access denied. Please allow microphone access!');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setRecording(false);
+    }
   };
 
   const getStressColor = (score) => {
@@ -93,13 +138,18 @@ function App() {
         <div className="hidden md:flex items-center gap-6 text-slate-400 text-sm">
           <span className="hover:text-yellow-400 cursor-pointer transition">Home</span>
           <span className="hover:text-yellow-400 cursor-pointer transition">About</span>
-          <span className="bg-yellow-400 text-slate-900 px-4 py-2 rounded font-semibold text-sm hover:bg-yellow-300 cursor-pointer transition">Free Legal Help</span>
+          <span className="bg-yellow-400 text-slate-900 px-4 py-2 rounded font-semibold text-sm hover:bg-yellow-300 cursor-pointer transition">
+            Free Legal Help
+          </span>
         </div>
       </nav>
 
       {/* Hero */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-16 px-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5" style={{backgroundImage: 'repeating-linear-gradient(90deg, #c9a84c 0px, #c9a84c 1px, transparent 1px, transparent 60px)'}}></div>
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{ backgroundImage: 'repeating-linear-gradient(90deg, #c9a84c 0px, #c9a84c 1px, transparent 1px, transparent 60px)' }}
+        ></div>
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="inline-block bg-yellow-400 text-slate-900 text-xs font-bold px-4 py-1 rounded-full tracking-widest uppercase mb-6">
             Free • Instant • Confidential
@@ -126,13 +176,29 @@ function App() {
             <h3 className="text-white font-semibold tracking-wide">Describe Your Legal Problem</h3>
           </div>
           <div className="p-6">
-            <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Your Situation</p>
+
+            {/* Problem with mic */}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Your Situation</p>
+              <button
+                onClick={recording ? stopRecording : startRecording}
+                className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition ${
+                  recording
+                    ? 'bg-red-600 text-white animate-pulse'
+                    : 'bg-slate-900 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900'
+                }`}
+              >
+                {recording ? '⏹ Stop Recording' : '🎤 Speak Your Problem'}
+              </button>
+            </div>
+
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder="Describe your problem in detail. Example: My employer has not paid my salary for 3 months and threatens to fire me if I complain..."
+              placeholder="Describe your problem in detail. Example: My employer has not paid my salary for 3 months and threatens to fire me if I complain... OR click 🎤 to speak"
               className="w-full h-36 p-4 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 resize-none focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 transition"
             />
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
               {[
                 { val: name, set: setName, placeholder: 'Your full name', label: 'Name' },
@@ -151,11 +217,13 @@ function App() {
                 </div>
               ))}
             </div>
+
             {error && (
               <div className="mt-4 bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded text-sm">
                 ⚠️ {error}
               </div>
             )}
+
             <button
               onClick={analyze}
               disabled={loading}
@@ -182,10 +250,15 @@ function App() {
                 <div>
                   <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-1">Stress Level</p>
                   <p className="font-bold text-lg text-slate-800 mb-1">
-                    {result.analysis.stress_score >= 7 ? '🔴 High Distress Detected' : result.analysis.stress_score >= 4 ? '🟡 Moderate Stress' : '🟢 Low Stress'}
+                    {result.analysis.stress_score >= 7
+                      ? '🔴 High Distress Detected'
+                      : result.analysis.stress_score >= 4
+                      ? '🟡 Moderate Stress'
+                      : '🟢 Low Stress'}
                   </p>
                   <p className="text-slate-500 text-sm">
-                    Category: <span className="font-bold text-slate-800 capitalize">{result.analysis.category}</span>
+                    Category:{' '}
+                    <span className="font-bold text-slate-800 capitalize">{result.analysis.category}</span>
                     {result.analysis.urgent && (
                       <span className="ml-2 bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded uppercase tracking-wide border border-red-200">
                         🚨 Urgent

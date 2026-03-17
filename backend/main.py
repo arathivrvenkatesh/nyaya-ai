@@ -119,3 +119,19 @@ def get_stats():
     from services.database import get_stats
     stats = get_stats()
     return {"success": True, "stats": stats}
+from fastapi import UploadFile, File
+
+@app.post("/transcribe")
+async def transcribe(
+    audio: UploadFile = File(...),
+    language: str = "auto"
+):
+    from services.voice import transcribe_audio
+    
+    # Read audio file
+    audio_bytes = await audio.read()
+    audio_tuple = (audio.filename, audio_bytes, audio.content_type)
+    
+    result = transcribe_audio(audio_tuple, language if language != "auto" else None)
+    
+    return result
