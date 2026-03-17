@@ -6,10 +6,13 @@ import os
 load_dotenv()
 
 def get_db():
-    client = MongoClient(os.getenv("MONGODB_URL"))
+    client = MongoClient(
+        os.getenv("MONGODB_URL"),
+        tls=True,
+        tlsAllowInvalidCertificates=True
+    )
     db = client["nyaya_ai"]
     return db
-
 def save_case(
     problem_text: str,
     category: str,
