@@ -161,7 +161,8 @@ function App() {
           <button
             onClick={async () => {
               await signOut(auth);
-              window.location.href = 'https://accounts.google.com/logout';
+              auth.currentUser && await auth.currentUser.delete();
+              window.location.reload();
             }}
             className="bg-yellow-400 text-slate-900 px-4 py-2 rounded font-semibold text-sm hover:bg-yellow-300 cursor-pointer transition"
           >
