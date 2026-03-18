@@ -3,7 +3,7 @@ import { auth, googleProvider } from './firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
   getRedirectResult
 } from 'firebase/auth';
 
@@ -22,7 +22,7 @@ function Login({ onLogin }) {
         }
       })
       .catch((err) => {
-        setError(err.message.replace('Firebase: ', ''));
+        console.log(err);
       });
   }, []);
 
@@ -50,11 +50,15 @@ function Login({ onLogin }) {
     setLoading(true);
     setError('');
     try {
-      await signInWithRedirect(auth, googleProvider);
+      googleProvider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      await signInWithPopup(auth, googleProvider);
+      onLogin();
     } catch (err) {
       setError(err.message.replace('Firebase: ', ''));
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (
@@ -108,7 +112,7 @@ function Login({ onLogin }) {
 
             {/* Email Input */}
             <div className="mb-3">
-              <p className="text-xs font-bold tracking-widests text-slate-400 uppercase mb-1">Email</p>
+              <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-1">Email</p>
               <input
                 type="email"
                 value={email}
@@ -170,3 +174,5 @@ function Login({ onLogin }) {
 }
 
 export default Login;
+
+
