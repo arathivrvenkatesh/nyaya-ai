@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import Login from './Login';
 
 const API = 'https://nyaya-ai-backend.onrender.com';
 
@@ -14,8 +17,26 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [letterLoading, setLetterLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [recording, setRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (authLoading) return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <p className="text-yellow-400 text-xl tracking-widest">⚖️ Loading...</p>
+    </div>
+  );
+
+  if (!user) return <Login onLogin={() => {}} />;
 
   const analyze = async () => {
     if (!text.trim()) { setError('Please describe your problem first'); return; }
@@ -136,11 +157,13 @@ function App() {
           </div>
         </div>
         <div className="hidden md:flex items-center gap-6 text-slate-400 text-sm">
-          <span className="hover:text-yellow-400 cursor-pointer transition">Home</span>
-          <span className="hover:text-yellow-400 cursor-pointer transition">About</span>
-          <span className="bg-yellow-400 text-slate-900 px-4 py-2 rounded font-semibold text-sm hover:bg-yellow-300 cursor-pointer transition">
-            Free Legal Help
-          </span>
+          <span className="text-slate-400 text-sm">{user.email || user.displayName}</span>
+          <button
+            onClick={() => signOut(auth)}
+            className="bg-yellow-400 text-slate-900 px-4 py-2 rounded font-semibold text-sm hover:bg-yellow-300 cursor-pointer transition"
+          >
+            Sign Out
+          </button>
         </div>
       </nav>
 
@@ -195,7 +218,7 @@ function App() {
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder="Describe your problem in detail. Example: My employer has not paid my salary for 3 months and threatens to fire me if I complain... OR click 🎤 to speak"
+              placeholder="Describe your problem in detail. Example: My employer has not paid my salary for 3 months... OR click 🎤 to speak"
               className="w-full h-36 p-4 border border-slate-200 rounded-lg text-sm text-slate-700 bg-slate-50 resize-none focus:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 transition"
             />
 
