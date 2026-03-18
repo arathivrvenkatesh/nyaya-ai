@@ -1,0 +1,21 @@
+{
+  "files": {
+    "main.css": "/nyaya-ai/static/css/main.c9a3c9f7.css",
+    "main.js": "/nyaya-ai/static/js/main.74a389ab.js",
+    "static/js/239.c5f68727.chunk.js": "/nyaya-ai/static/js/239.c5f68727.chunk.js",
+    "static/js/977.01378288.chunk.js": "/nyaya-ai/static/js/977.01378288.chunk.js",
+    "static/js/732.fda73a07.chunk.js": "/nyaya-ai/static/js/732.fda73a07.chunk.js",
+    "static/js/453.825386d9.chunk.js": "/nyaya-ai/static/js/453.825386d9.chunk.js",
+    "index.html": "/nyaya-ai/index.html",
+    "main.c9a3c9f7.css.map": "/nyaya-ai/static/css/main.c9a3c9f7.css.map",
+    "main.74a389ab.js.map": "/nyaya-ai/static/js/main.74a389ab.js.map",
+    "239.c5f68727.chunk.js.map": "/nyaya-ai/static/js/239.c5f68727.chunk.js.map",
+    "977.01378288.chunk.js.map": "/nyaya-ai/static/js/977.01378288.chunk.js.map",
+    "732.fda73a07.chunk.js.map": "/nyaya-ai/static/js/732.fda73a07.chunk.js.map",
+    "453.825386d9.chunk.js.map": "/nyaya-ai/static/js/453.825386d9.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c9a3c9f7.css",
+    "static/js/main.74a389ab.js"
+  ]
+}
