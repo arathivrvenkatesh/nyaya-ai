@@ -159,7 +159,10 @@ function App() {
         <div className="hidden md:flex items-center gap-6 text-slate-400 text-sm">
           <span className="text-slate-400 text-sm">{user.email || user.displayName}</span>
           <button
-            onClick={() => signOut(auth)}
+            onClick={async () => {
+              await signOut(auth);
+              window.location.href = 'https://accounts.google.com/logout';
+            }}
             className="bg-yellow-400 text-slate-900 px-4 py-2 rounded font-semibold text-sm hover:bg-yellow-300 cursor-pointer transition"
           >
             Sign Out
