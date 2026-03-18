@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, googleProvider } from './firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup
+  signInWithRedirect,
+  getRedirectResult
 } from 'firebase/auth';
 
 function Login({ onLogin }) {
@@ -12,6 +13,18 @@ function Login({ onLogin }) {
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          onLogin();
+        }
+      })
+      .catch((err) => {
+        setError(err.message.replace('Firebase: ', ''));
+      });
+  }, []);
 
   const handleEmailAuth = async () => {
     if (!email || !password) {
@@ -37,16 +50,11 @@ function Login({ onLogin }) {
     setLoading(true);
     setError('');
     try {
-      await signInWithPopup(auth, googleProvider);
-      onLogin();
+      await signInWithRedirect(auth, googleProvider);
     } catch (err) {
-      if (err.code === 'auth/popup-blocked') {
-        setError('Popup blocked! Please allow popups for this site or use email login below.');
-      } else {
-        setError(err.message.replace('Firebase: ', ''));
-      }
+      setError(err.message.replace('Firebase: ', ''));
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -100,7 +108,7 @@ function Login({ onLogin }) {
 
             {/* Email Input */}
             <div className="mb-3">
-              <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-1">Email</p>
+              <p className="text-xs font-bold tracking-widests text-slate-400 uppercase mb-1">Email</p>
               <input
                 type="email"
                 value={email}
